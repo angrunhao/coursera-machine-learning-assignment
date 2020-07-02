@@ -9,7 +9,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
-<meta name="author" content="Sebastian Ang" />
+<meta name="author" content="Sebastian Ang Run Hao" />
 
 
 <title>Prediction Assignment</title>
@@ -374,8 +374,8 @@ summary {
 <p>Import data. We mix the final testing data together with the training data here, because we will do PCA analysis, and since we have the data beforehand it is easier to perform PCA together to ensure the variables are reduced to the same dimensions.</p>
 <p>Note that there are a lot of almost empty columns, and some containing NA values. We first clean the data for any columns that exhibit sporadic and incomplete data, or empty columns. We also remove the predicted variable classe from this master dataframe</p>
 <p>Note that after cleaning, we are still left with a huge number of 59 variables, as seen below.</p>
-<pre class="r"><code>build &lt;- read.csv(&quot;C:\\Users\\RUNHAO\\Documents\\R\\pml-training.csv&quot;)
-validation &lt;- read.csv(&quot;C:\\Users\\RUNHAO\\Documents\\R\\pml-testing.csv&quot;)
+<pre class="r"><code>build &lt;- read.csv(&quot;data\\pml-training.csv&quot;)
+validation &lt;- read.csv(&quot;data\\pml-testing.csv&quot;)
 masterdata &lt;- plyr::rbind.fill(build,validation)
 
 masterdata &lt;- masterdata[,colSums(is.na(masterdata)) &lt; 1]
@@ -474,13 +474,13 @@ mdl &lt;- caret::train(classe ~ . ,method = &quot;rf&quot;, data = training_trai
 table(pred1, training_testing$classe)</code></pre>
 <pre><code>##      
 ## pred1    A    B    C    D    E
-##     A 1625   34    9    1    0
-##     B   20 1080   25    4   11
-##     C   11   21  979   53    5
-##     D   12    2   13  904   11
-##     E    6    2    0    2 1055</code></pre>
+##     A 1642   28    5    2    0
+##     B    6 1085   21    5    6
+##     C   14   15  984   48    5
+##     D   11    5   15  905   12
+##     E    1    6    1    4 1059</code></pre>
 <pre class="r"><code>sum(diag(table(pred1, training_testing$classe)))/sum(table(pred1, training_testing$classe))</code></pre>
-<pre><code>## [1] 0.9588785</code></pre>
+<pre><code>## [1] 0.9643161</code></pre>
 <p>Once again we see the predictive potential of the RF model. We take a closer look at the model output conditions. The resampling results show that the model seems to exhibit similar accuracy as calculated</p>
 <pre class="r"><code>mdl</code></pre>
 <pre><code>## Random Forest 
@@ -491,13 +491,13 @@ table(pred1, training_testing$classe)</code></pre>
 ## 
 ## No pre-processing
 ## Resampling: Cross-Validated (5 fold) 
-## Summary of sample sizes: 10989, 10990, 10991, 10988, 10990 
+## Summary of sample sizes: 10989, 10989, 10990, 10990, 10990 
 ## Resampling results across tuning parameters:
 ## 
 ##   mtry  Accuracy   Kappa    
-##    2    0.9521004  0.9394150
-##    7    0.9446754  0.9300274
-##   13    0.9371774  0.9205493
+##    2    0.9537743  0.9415252
+##    7    0.9480966  0.9343477
+##   13    0.9410353  0.9254206
 ## 
 ## Accuracy was used to select the optimal model using the largest value.
 ## The final value used for the model was mtry = 2.</code></pre>
