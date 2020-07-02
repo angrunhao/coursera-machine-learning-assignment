@@ -1,0 +1,100 @@
+---
+title: "Prediction Assignment"
+author: "Sebastian Ang"
+date: "7/1/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data Exploration
+
+Import data. We mix the final testing data together with the training data here, because we will do PCA analysis, and since we have the data beforehand it is easier to perform PCA together to ensure the variables are reduced to the same dimensions.
+
+Note that there are a lot of almost empty columns, and some containing NA values. We first clean the data for any columns that exhibit sporadic and incomplete data, or empty columns. We also remove the predicted variable classe from this master dataframe
+
+Note that after cleaning, we are still left with a huge number of 59 variables, as seen below.
+
+```{r caret,plyr}
+build <- read.csv("data\\pml-training.csv")
+validation <- read.csv("data\\pml-testing.csv")
+masterdata <- plyr::rbind.fill(build,validation)
+
+masterdata <- masterdata[,colSums(is.na(masterdata)) < 1]
+masterdata <- masterdata[,colSums(masterdata=="")<1]
+names(masterdata)
+```
+
+We find that the relevant data starts from columns 8 onwards.
+
+```{r}
+masterdata <- masterdata[,8:59]
+```
+
+We still have 52 variables, hence we perform pre-processing by conducting principal-components analysis PCA (previously we have made sure to ignore the predicted variable "classe"), to try and reduce the dimensionality of the dataset. PCA analysis shows us that by including up to PC25, we are able to capture 95% of the dataset's variability!
+
+```{r}
+masterdataProcessed <- prcomp(masterdata[,1:52], center = TRUE, scale = TRUE)
+summary(masterdataProcessed)
+```
+
+However we shall attempt to further reduce the number of variables involved. The PCA plot tells us that eigenvalue = 1 when we include up to the 13th PC.
+
+```{r}
+plot(masterdataProcessed, type = "l", npcs = 20, main = "Principal Components Plot")
+abline(h = 1, col = "blue", lty = 10)
+legend("topright", legend = c("Eigenvalue = 1"), col = c("blue"), lty = 10)
+```
+
+We rebuild our dataset by stitching the predicted variable "classe" with the reduced principal components, making sure to only take the training data. The components stitched will include up to only the 13th PC. Then we then further divide the pml-training data into a training_training and training_testing set.
+
+We also take this opportunity to recreate our testing set for the final assignment
+
+```{r}
+masterdataProcessed <- data.frame(masterdataProcessed$x)
+totalRows <- nrow(masterdataProcessed)-20
+
+buildPCA <- masterdataProcessed[1:totalRows,1:13]
+training <- data.frame(buildPCA, classe = as.factor(build$classe))
+
+inTrain <- caret::createDataPartition(y = training$classe, p = .7, list = FALSE)
+training_training <- training[inTrain,]
+training_testing <- training[-inTrain,]
+
+dim(training_training); dim(training_testing)
+
+testing <- masterdataProcessed[totalRows:nrow(masterdataProcessed),1:13]
+```
+
+## Building Machine Learning model
+
+Here we use Random Forest to conduct machine learning, as we have more than two classes, and Random Forest works great as a classifier algorithm. 
+
+By default the train function in the caret package chooses the cross validation by itself. We can choose to take this one step further and tune the parameters ourselves. We define the training method to be used. We set 5-folds cross-validation as the preferred method.
+
+We call this random forest model "mdl"
+
+```{r, message=FALSE}
+control <- caret::trainControl(method="cv", number=5, verbose = FALSE)
+mdl <- caret::train(classe ~ . ,method = "rf", data = training_training, trControl = control, ntree=250)
+```
+
+We extend the model to do a prediction test on the training_testing data.
+
+We then tabulate the prediction results against the actual class of the underlying testing data, and calculate the prediction accuracy of the results. Note that it appears to be quite accurate with accuracy = 0.96
+
+```{r}
+pred1 <- predict(mdl, training_testing)
+table(pred1, training_testing$classe)
+sum(diag(table(pred1, training_testing$classe)))/sum(table(pred1, training_testing$classe))
+```
+
+Once again we see the predictive potential of the RF model. We take a closer look at the model output conditions. The resampling results show that the model seems to exhibit similar accuracy as calculated
+
+```{r}
+mdl
+```
